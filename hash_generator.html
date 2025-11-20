@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hash Generator & Verifier</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7dd3fc}
+    *{box-sizing:border-box}
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#071023 0%, #0b1220 100%); color:#e6eef6; margin:0; padding:32px}
+    .wrap{max-width:900px;margin:0 auto}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(2,6,23,.6)}
+    .row{display:flex;gap:12px;margin-bottom:12px}
+    .col{flex:1}
+    textarea{width:100%;min-height:140px;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:13px}
+    input[type=file]{display:none}
+    .file-label{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06);cursor:pointer}
+    .btn{background:linear-gradient(90deg,#0ea5e9,#7dd3fc);color:#012; padding:10px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.05);color:var(--muted)}
+    .algos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .algo{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:rgba(255,255,255,0.01);font-size:13px}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px}
+    .hash{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
+    .ok{color:#34d399}
+    .bad{color:#fb7185}
+    .small{font-size:12px;color:var(--muted)}
+    footer{margin-top:14px;color:var(--muted);font-size:13px}
+    .copy{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:6px;border-radius:6px;cursor:pointer}
+    @media(max-width:720px){.row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#08305a,#03203a);display:flex;align-items:center;justify-content:center;font-weight:700">HG</div>
+      <div>
+        <h1>Hash Generator & Verifier</h1>
+        <p class="lead">Upload a file or paste text to produce SHA, MD5 and more — great for integrity checks & awareness training.</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label for="text">Paste text</label>
+          <textarea id="text" placeholder="Type or paste text here..."></textarea>
+        </div>
+        <div style="width:220px">
+          <label class="small">Or upload file</label>
+          <label class="file-label" id="dropzone" tabindex="0">
+            <input type="file" id="fileInput">
+            <div style="flex:1">
+              <div id="fileName" class="small">No file selected — click to choose or drag & drop</div>
+              <div id="fileInfo" class="small"></div>
+            </div>
+          </label>
+
+          <div style="margin-top:12px">
+            <div class="small" style="margin-bottom:6px">Algorithms</div>
+            <div class="algos" id="algos">
+              <label class="algo"><input type="checkbox" value="SHA-256" checked> SHA-256</label>
+              <label class="algo"><input type="checkbox" value="SHA-1"> SHA-1</label>
+              <label class="algo"><input type="checkbox" value="SHA-384"> SHA-384</label>
+              <label class="algo"><input type="checkbox" value="SHA-512"> SHA-512</label>
+              <label class="algo"><input type="checkbox" value="MD5"> MD5</label>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn" id="genBtn">Generate</button>
+            <button class="btn secondary" id="clearBtn">Clear</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="small">Verify (paste expected hash)</div>
+            <input id="expected" placeholder="expected hash" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;margin-top:6px;color:inherit">
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <select id="verifyAlgo" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+                <option>SHA-256</option>
+                <option>MD5</option>
+                <option>SHA-1</option>
+                <option>SHA-384</option>
+                <option>SHA-512</option>
+              </select>
+              <button class="btn" id="verifyBtn">Verify</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="resultsSection" style="display:none">
+        <h3 style="margin:6px 0 10px">Results</h3>
+        <table id="resultsTable">
+          <thead>
+            <tr><th style="width:130px">Algorithm</th><th>Hash</th><th style="width:120px">Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <footer>
+        <div class="small">Tip: Save this file as <code>index.html</code> and push to a GitHub repo. Enable GitHub Pages on the repository settings (branch: main or gh-pages). That's it — your site will be live at <em>https://&lt;username&gt;.github.io/&lt;repo&gt;/</em>.</div>
+      </footer>
+    </div>
+
+  </div>
+
+<script>
+// Helper: convert ArrayBuffer to hex
+function bufToHex(buffer){
+  const bytes = new Uint8Array(buffer);
+  const s = [];
+  for(let i=0;i<bytes.length;i++){
+    s.push(bytes[i].toString(16).padStart(2,'0'));
+  }
+  return s.join('');
+}
+
+async function digest(alg, data){
+  // data: ArrayBuffer
+  if(alg.toUpperCase()==='MD5'){
+    // MD5 over bytes
+    const bytes = new Uint8Array(data);
+    return md5array(bytes);
+  }
+  const name = alg.replace('-', ''); // 'SHA-256'->'SHA256' works in many browsers but standard expects 'SHA-256'
+  try{
+    const out = await crypto.subtle.digest(alg, data);
+    return bufToHex(out);
+  }catch(e){
+    // some browsers accept 'SHA-256' explicitly
+    const out = await crypto.subtle.digest(alg, data);
+    return bufToHex(out);
+  }
+}
+
+async function hashText(alg, text){
+  const enc = new TextEncoder();
+  return await digest(alg, enc.encode(text));
+}
+
+async function hashBuffer(alg, buffer){
+  return await digest(alg, buffer);
+}
+
+// minimal md5 implementation that returns hex for a Uint8Array input
+// based on a compact public-domain implementation
+function md5array(data){
+  // convert Uint8Array to string of chars
+  let i, x = [], k;
+  for(i=0;i<data.length;i++) x.push(String.fromCharCode(data[i]));
+  const str = x.join('');
+  function rotateLeft(lValue, iShiftBits) {return (lValue<<iShiftBits) | (lValue>>>(32-iShiftBits));}
+  function addUnsigned(lX,lY){
+    const lX4=(lX&0x40000000), lY4=(lY&0x40000000), lX8=(lX&0x80000000), lY8=(lY&0x80000000), lResult=(lX&0x3FFFFFFF)+(lY&0x3FFFFFFF);
+    if(lX4&lY4) return (lResult^0x80000000^lX8^lY8);
+    if(lX4|lY4){ if(lResult&0x40000000) return (lResult^0xC0000000^lX8^lY8); else return (lResult^0x40000000^lX8^lY8);} else return (lResult^lX8^lY8);
+  }
+  function F(x,y,z){return (x & y) | ((~x) & z);} function G(x,y,z){return (x & z) | (y & (~z));} function H(x,y,z){return (x ^ y ^ z);} function I(x,y,z){return (y ^ (x | (~z)));}
+  function FF(a,b,c,d,x,s,ac){a=addUnsigned(a,addUnsigned(addUnsigned(F(b,c,d),x),ac));return addUnsigned(rotateLeft(a,s),b);} 
+  function GG(a,b,c,d,x,s,ac){a=addUnsigned(a,addUnsigned(addUnsigned(G(b,c,d),x),ac));return addUnsigned(rotateLeft(a,s),b);} 
+  function HH(a,b,c,d,x,s,ac){a=addUnsigned(a,addUnsigned(addUnsigned(H(b,c,d),x),ac));return addUnsigned(rotateLeft(a,s),b);} 
+  function II(a,b,c,d,x,s,ac){a=addUnsigned(a,addUnsigned(addUnsigned(I(b,c,d),x),ac));return addUnsigned(rotateLeft(a,s),b);} 
+  function convertToWordArray(str){
+    const lWordCount = (((str.length + 8) >> 6) + 1) * 16;
+    const lWordArray = new Array(lWordCount-1);
+    let lBytePosition=0, lByteCount=0;
+    for(; lByteCount<str.length; ){ const j = str.charCodeAt(lByteCount); lWordArray[lBytePosition>>2] |= (j & 0xFF) << ((lBytePosition)%4*8); lBytePosition++; lByteCount++; }
+    lWordArray[lBytePosition>>2] |= 0x80 << ((lBytePosition)%4*8); lWordArray[lWordCount-2] = str.length<<3; return lWordArray;
+  }
+  function wordToHex(lValue){ let hex='', tmp; for(let i=0;i<4;i++){ tmp=(lValue>>>(i*8))&255; hex += ('0' + tmp.toString(16)).slice(-2);} return hex; }
+  const xw = convertToWordArray(str);
+  let a=0x67452301,b=0xEFCDAB89,c=0x98BADCFE,d=0x10325476;
+  for(i=0;i<xw.length;i+=16){
+    const olda=a, oldb=b, oldc=c, oldd=d;
+    a=FF(a,b,c,d,xw[i+0],7,0xD76AA478); d=FF(d,a,b,c,xw[i+1],12,0xE8C7B756); c=FF(c,d,a,b,xw[i+2],17,0x242070DB); b=FF(b,c,d,a,xw[i+3],22,0xC1BDCEEE);
+    a=FF(a,b,c,d,xw[i+4],7,0xF57C0FAF); d=FF(d,a,b,c,xw[i+5],12,0x4787C62A); c=FF(c,d,a,b,xw[i+6],17,0xA8304613); b=FF(b,c,d,a,xw[i+7],22,0xFD469501);
+    a=FF(a,b,c,d,xw[i+8],7,0x698098D8); d=FF(d,a,b,c,xw[i+9],12,0x8B44F7AF); c=FF(c,d,a,b,xw[i+10],17,0xFFFF5BB1); b=FF(b,c,d,a,xw[i+11],22,0x895CD7BE);
+    a=FF(a,b,c,d,xw[i+12],7,0x6B901122); d=FF(d,a,b,c,xw[i+13],12,0xFD987193); c=FF(c,d,a,b,xw[i+14],17,0xA679438E); b=FF(b,c,d,a,xw[i+15],22,0x49B40821);
+    a=GG(a,b,c,d,xw[i+1],5,0xF61E2562); d=GG(d,a,b,c,xw[i+6],9,0xC040B340); c=GG(c,d,a,b,xw[i+11],14,0x265E5A51); b=GG(b,c,d,a,xw[i+0],20,0xE9B6C7AA);
+    a=GG(a,b,c,d,xw[i+5],5,0xD62F105D); d=GG(d,a,b,c,xw[i+10],9,0x2441453); c=GG(c,d,a,b,xw[i+15],14,0xD8A1E681); b=GG(b,c,d,a,xw[i+4],20,0xE7D3FBC8);
+    a=GG(a,b,c,d,xw[i+9],5,0x21E1CDE6); d=GG(d,a,b,c,xw[i+14],9,0xC33707D6); c=GG(c,d,a,b,xw[i+3],14,0xF4D50D87); b=GG(b,c,d,a,xw[i+8],20,0x455A14ED);
+    a=GG(a,b,c,d,xw[i+13],5,0xA9E3E905); d=GG(d,a,b,c,xw[i+2],9,0xFCEFA3F8); c=GG(c,d,a,b,xw[i+7],14,0x676F02D9); b=GG(b,c,d,a,xw[i+12],20,0x8D2A4C8A);
+    a=HH(a,b,c,d,xw[i+5],4,0xFFFA3942); d=HH(d,a,b,c,xw[i+8],11,0x8771F681); c=HH(c,d,a,b,xw[i+11],16,0x6D9D6122); b=HH(b,c,d,a,xw[i+14],23,0xFDE5380C);
+    a=HH(a,b,c,d,xw[i+1],4,0xA4BEEA44); d=HH(d,a,b,c,xw[i+4],11,0x4BDECFA9); c=HH(c,d,a,b,xw[i+7],16,0xF6BB4B60); b=HH(b,c,d,a,xw[i+10],23,0xBEBFBC70);
+    a=HH(a,b,c,d,xw[i+13],4,0x289B7EC6); d=HH(d,a,b,c,xw[i+0],11,0xEAA127FA); c=HH(c,d,a,b,xw[i+3],16,0xD4EF3085); b=HH(b,c,d,a,xw[i+6],23,0x4881D05);
+    a=HH(a,b,c,d,xw[i+9],4,0xD9D4D039); d=HH(d,a,b,c,xw[i+12],11,0xE6DB99E5); c=HH(c,d,a,b,xw[i+15],16,0x1FA27CF8); b=HH(b,c,d,a,xw[i+2],23,0xC4AC5665);
+    a=II(a,b,c,d,xw[i+0],6,0xF4292244); d=II(d,a,b,c,xw[i+7],10,0x432AFF97); c=II(c,d,a,b,xw[i+14],15,0xAB9423A7); b=II(b,c,d,a,xw[i+5],21,0xFC93A039);
+    a=II(a,b,c,d,xw[i+12],6,0x655B59C3); d=II(d,a,b,c,xw[i+3],10,0x8F0CCC92); c=II(c,d,a,b,xw[i+10],15,0xFFEFF47D); b=II(b,c,d,a,xw[i+1],21,0x85845DD1);
+    a=II(a,b,c,d,xw[i+8],6,0x6FA87E4F); d=II(d,a,b,c,xw[i+15],10,0xFE2CE6E0); c=II(c,d,a,b,xw[i+6],15,0xA3014314); b=II(b,c,d,a,xw[i+13],21,0x4E0811A1);
+    a=II(a,b,c,d,xw[i+4],6,0xF7537E82); d=II(d,a,b,c,xw[i+11],10,0xBD3AF235); c=II(c,d,a,b,xw[i+2],15,0x2AD7D2BB); b=II(b,c,d,a,xw[i+9],21,0xEB86D391);
+    a=addUnsigned(a,olda); b=addUnsigned(b,oldb); c=addUnsigned(c,oldc); d=addUnsigned(d,oldd);
+  }
+  return wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d);
+}
+
+// UI logic
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const fileName = document.getElementById('fileName');
+const fileInfo = document.getElementById('fileInfo');
+const textArea = document.getElementById('text');
+const genBtn = document.getElementById('genBtn');
+const clearBtn = document.getElementById('clearBtn');
+const resultsSection = document.getElementById('resultsSection');
+const resultsTableBody = document.querySelector('#resultsTable tbody');
+let currentFile = null;
+
+function resetResults(){ resultsTableBody.innerHTML=''; resultsSection.style.display='none'; }
+
+dropzone.addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', async (e)=>{ if(e.target.files.length) await selectFile(e.target.files[0]); });
+
+async function selectFile(f){ currentFile = f; fileName.textContent = f.name; fileInfo.textContent = `${(f.size/1024).toFixed(2)} KB • ${f.type || 'unknown'}`; }
+
+// drag & drop
+;['dragenter','dragover'].forEach(ev=> dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); dropzone.style.borderColor='rgba(125,211,252,0.6)'; }));
+['dragleave','drop'].forEach(ev=> dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); dropzone.style.borderColor=''; }));
+
+dropzone.addEventListener('drop', async (e)=>{ if(e.dataTransfer.files.length) await selectFile(e.dataTransfer.files[0]); });
+
+clearBtn.addEventListener('click', ()=>{ textArea.value=''; fileInput.value=''; currentFile=null; fileName.textContent='No file selected — click to choose or drag & drop'; fileInfo.textContent=''; resetResults(); });
+
+async function generate(){
+  resetResults();
+  const algCheckboxes = Array.from(document.querySelectorAll('#algos input[type=checkbox]')).filter(i=>i.checked).map(i=>i.value);
+  if(algCheckboxes.length===0){ alert('Pick at least one algorithm.'); return }
+  const tasks = [];
+  if(currentFile){
+    const arr = await currentFile.arrayBuffer();
+    for(const a of algCheckboxes){ tasks.push({algo:a, isFile:true, promise: hashBuffer(a, arr)}); }
+  }
+  if(textArea.value.trim()){
+    const txt = textArea.value;
+    for(const a of algCheckboxes){ tasks.push({algo:a, isFile:false, promise: hashText(a, txt)}); }
+  }
+  if(tasks.length===0){ alert('Provide text or a file first.'); return }
+  resultsSection.style.display='block';
+  for(const t of tasks){
+    const hash = await t.promise;
+    const row = document.createElement('tr');
+    const algCell = document.createElement('td'); algCell.textContent = t.algo + (t.isFile ? ' (file)' : '');
+    const hashCell = document.createElement('td'); hashCell.innerHTML = `<div class="hash">${hash}</div>`;
+    const actions = document.createElement('td');
+    const copyBtn = document.createElement('button'); copyBtn.textContent='Copy'; copyBtn.className='copy'; copyBtn.addEventListener('click', ()=>navigator.clipboard.writeText(hash));
+    actions.appendChild(copyBtn);
+    row.appendChild(algCell); row.appendChild(hashCell); row.appendChild(actions);
+    resultsTableBody.appendChild(row);
+  }
+}
+
+genBtn.addEventListener('click', generate);
+
+async function verify(){
+  const expected = document.getElementById('expected').value.trim().toLowerCase();
+  if(!expected){ alert('Paste the expected hash to verify.'); return }
+  const algo = document.getElementById('verifyAlgo').value;
+  let hash;
+  if(currentFile){
+    const arr = await currentFile.arrayBuffer(); hash = await hashBuffer(algo, arr);
+  } else if(textArea.value.trim()){ hash = await hashText(algo, textArea.value); }
+  else{ alert('Provide text or a file first.'); return }
+  resetResults(); resultsSection.style.display='block';
+  const row = document.createElement('tr');
+  const algCell = document.createElement('td'); algCell.textContent = algo + ' (verification)';
+  const hashCell = document.createElement('td'); hashCell.innerHTML = `<div class="hash">${hash}</div><div class="small">expected: ${expected}</div>`;
+  const actions = document.createElement('td');
+  const ok = hash.toLowerCase() === expected.toLowerCase();
+  const badge = document.createElement('div'); badge.textContent = ok ? 'MATCH' : 'MISMATCH'; badge.className = ok ? 'ok' : 'bad';
+  actions.appendChild(badge);
+  row.appendChild(algCell); row.appendChild(hashCell); row.appendChild(actions);
+  resultsTableBody.appendChild(row);
+}
+
+document.getElementById('verifyBtn').addEventListener('click', verify);
+
+// helpful quick demo data (doesn't run automatically)
+</script>
+</body>
+</html>
